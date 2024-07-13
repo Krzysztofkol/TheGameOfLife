@@ -1,5 +1,5 @@
-_game-of-life/
-├── concept-art.png
+TheGameOfLife/
+├── the-game-of-life-concept-art.png
 ├── csv_files/
 │   ├── health_hygiene.csv
 │   ├── home.csv
