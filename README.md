@@ -16,6 +16,4 @@ TheGameOfLife/
 └── start-game-of-life.bat
 ```
 
-```
 ![Screenshot of example dashboard](the-game-of-life-concept-art.png "Screenshot of example dashboard")
-```
