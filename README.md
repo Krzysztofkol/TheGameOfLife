@@ -2,6 +2,7 @@
 
 ### Folder structure:
 
+```
 TheGameOfLife/
 ├── the-game-of-life-concept-art.png
 ├── csv_files/
@@ -13,3 +14,4 @@ TheGameOfLife/
 ├── game-of-life-backend.py
 ├── game-of-life-frontend.html
 └── start-game-of-life.bat
+```
