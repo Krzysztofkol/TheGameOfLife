@@ -17,3 +17,10 @@ TheGameOfLife/
 ```
 
 ![Screenshot of example dashboard](the-game-of-life-concept-art.png "Screenshot of example dashboard")
+
+
+### Dependencies
+
+- flask
+- flask_cors
+- pandas
