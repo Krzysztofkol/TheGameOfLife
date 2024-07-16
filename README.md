@@ -1,5 +1,9 @@
 # TheGameOfLife
 
+### The UI:
+
+![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
+
 ### Folder structure:
 
 ```
@@ -17,9 +21,6 @@ TheGameOfLife/
 ├── README.md (567 bytes)
 └── start-game-of-life.bat (278 bytes)
 ```
-### The UI:
-
-![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
 ### Dependencies:
 
