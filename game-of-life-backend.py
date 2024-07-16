@@ -68,7 +68,10 @@ def process_activities(df, section):
             'color': color,
             'text': f"{current_minutes}/{total_minutes}",
             'is_zero': progress <= 0,
-            'section': section
+            'section': section,
+            'frequency': frequency,
+            'extra_interval': extra_interval,
+            'last_datetime': last_datetime.strftime(DATETIME_FORMAT)
         })
     return result
 
@@ -92,6 +95,18 @@ def get_all_activities():
     app.logger.debug(f"Returning {len(result)} activities for all sections")
     return jsonify(result)
 
+@app.route('/activities/feedback', methods=['GET'])
+def get_feedback_activities():
+    app.logger.debug("Fetching feedback activities")
+    result = []
+    for section in SECTIONS:
+        file_name = f"{section}.csv"
+        df = load_data(file_name)
+        result.extend(process_activities(df, section))
+    result.sort(key=lambda x: x['progress'])  # Sort by progress in ascending order
+    app.logger.debug(f"Returning {len(result)} sorted feedback activities")
+    return jsonify(result)
+
 @app.route('/complete/<section>/<path:activity>', methods=['POST'])
 def complete_activity(section, activity):
     app.logger.debug(f"Completing activity: {activity} in section: {section}")
@@ -99,7 +114,6 @@ def complete_activity(section, activity):
     df = load_data(file_name)
     data = request.json
     app.logger.debug(f"Received data: {data}")
-    
     if data and 'datetime' in data:
         app.logger.debug(f"Received datetime string: {data['datetime']}")
         try:
@@ -112,10 +126,9 @@ def complete_activity(section, activity):
     else:
         now = datetime.now()
         app.logger.warning(f"No datetime provided, using current datetime: {now}")
-    
+
     activity = urllib.parse.unquote(activity)
     app.logger.debug(f"Decoded activity: {activity}")
-    
     if activity in df['activity'].values:
         df.loc[df['activity'] == activity, 'last_datetime'] = now
         app.logger.debug(f"Updated existing activity: {activity} with datetime: {now}")
@@ -125,7 +138,7 @@ def complete_activity(section, activity):
         new_row = pd.DataFrame({'activity': [activity], 'frequency': [frequency], 'extra_interval': [extra_interval], 'last_datetime': [now]})
         df = pd.concat([df, new_row], ignore_index=True)
         app.logger.debug(f"Added new activity: {activity} with datetime: {now}")
-    
+
     save_data(df, file_name)
     return jsonify({'status': 'success', 'datetime': now.strftime('%Y-%m-%d %H:%M:%S')})
 

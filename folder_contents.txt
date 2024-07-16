@@ -8,12 +8,12 @@ _TheGameOfLife-github-version/
 │   ├── bills_subscriptions.csv (141 bytes)
 │   └── home.csv (124 bytes)
 ├── TheGameOfLife-concept-art.png (76036 bytes)
-├── game-of-life-frontend.html (15889 bytes)
-├── game-of-life-backend.py (5289 bytes)
-├── README.md (757 bytes)
+├── game-of-life-frontend.html (19589 bytes)
+├── game-of-life-backend.py (5918 bytes)
+├── README.md (754 bytes)
 └── start-game-of-life.bat (286 bytes)
 
-### `game-of-life-frontend.html` file (15889 bytes):
+### `game-of-life-frontend.html` file (19589 bytes):
 
 ```
 <!DOCTYPE html>
@@ -144,12 +144,23 @@ _TheGameOfLife-github-version/
             font-size: 14px;
             margin-bottom: 10px;
         }
+        .feedback-activity {
+            background-color: #ffe6e6;
+            padding: 5px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+        .feedback-activity p {
+            margin: 2px 0;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <div id="app">
         <h1>The Game of Life</h1>
         <div class="navigation">
+            <button @click="showFeedback">Feedback</button>
             <button @click="showOverview">Overview</button>
             <button @click="showSections">Sections</button>
         </div>
@@ -172,7 +183,7 @@ _TheGameOfLife-github-version/
                 </div>
             </div>
         </div>
-        <div v-else>
+        <div v-else-if="currentView === 'sections'">
             <div class="navigation">
                 <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
                 <button @click="nextPage" :disabled="currentPage === 2">Next</button>
@@ -190,10 +201,33 @@ _TheGameOfLife-github-version/
                             <div class="progress-text">{{ formatTime(activity.text) }}</div>
                         </div>
                         <div class="button-container">
-                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+							<button @click="completeActivity(section, activity.activity)">Complete</button>
                             <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
                         </div>
                         <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-else-if="currentView === 'feedback'">
+            <div class="container">
+                <div v-for="section in sections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in getFeedbackActivitiesForSection(section)" :key="activity.activity" class="activity-container feedback-activity">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <p><strong>Progress:</strong> {{ (activity.progress * 100).toFixed(2) }}%</p>
+                        <p><strong>Frequency:</strong> {{ activity.frequency }} days</p>
+                        <p><strong>Extra Interval:</strong> {{ activity.extra_interval }} hours</p>
+                        <p><strong>Last Completed:</strong> {{ formatDateTime(activity.last_datetime) }}</p>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(activity.section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(activity.section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + activity.section + '-' + activity.activity" type="text" class="datetime-input">
                     </div>
                 </div>
             </div>
@@ -219,6 +253,7 @@ _TheGameOfLife-github-version/
                     bills_subscriptions: []
                 },
                 activitiesBySection: {},
+                feedbackActivities: [],
                 flatpickrInstances: {}
             },
             computed: {
@@ -234,6 +269,10 @@ _TheGameOfLife-github-version/
                 showSections() {
                     this.currentView = 'sections';
                     this.refreshData();
+                },
+                showFeedback() {
+                    this.currentView = 'feedback';
+                    this.fetchFeedbackActivities();
                 },
                 fetchActivities(section) {
                     console.log(`Fetching activities for section: ${section}`);
@@ -260,6 +299,20 @@ _TheGameOfLife-github-version/
                             console.error('Error fetching all activities:', error);
                         });
                 },
+                fetchFeedbackActivities() {
+                    console.log('Fetching feedback activities');
+                    axios.get('http://localhost:5000/activities/feedback')
+                        .then(response => {
+                            console.log('Received feedback activities:', response.data);
+                            this.feedbackActivities = response.data;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching feedback activities:', error);
+                        });
+                },
+                getFeedbackActivitiesForSection(section) {
+                    return this.feedbackActivities.filter(activity => activity.section === section);
+                },
                 completeActivity(section, activity) {
                     axios.post(`http://localhost:5000/complete/${section}/${encodeURIComponent(activity)}`, {}, {
                         headers: {
@@ -269,8 +322,10 @@ _TheGameOfLife-github-version/
                     .then(() => {
                         if (this.currentView === 'overview') {
                             this.fetchAllActivities();
-                        } else {
+                        } else if (this.currentView === 'sections') {
                             this.fetchActivities(section);
+                        } else if (this.currentView === 'feedback') {
+                            this.fetchFeedbackActivities();
                         }
                     })
                     .catch(error => console.error(error));
@@ -279,8 +334,10 @@ _TheGameOfLife-github-version/
                     console.log('Refreshing data for current page');
                     if (this.currentView === 'overview') {
                         this.fetchAllActivities();
-                    } else {
+                    } else if (this.currentView === 'sections') {
                         this.currentSections.forEach(section => this.fetchActivities(section));
+                    } else if (this.currentView === 'feedback') {
+                        this.fetchFeedbackActivities();
                     }
                 },
                 formatTime(timeString) {
@@ -299,6 +356,10 @@ _TheGameOfLife-github-version/
                 },
                 formatSectionTitle(section) {
                     return section.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                },
+                formatDateTime(dateTimeString) {
+                    const date = new Date(dateTimeString.replace(/_/g, ' '));
+                    return date.toLocaleString();
                 },
                 openDateTimePicker(section, activity) {
                     const key = `${section}-${activity}`;
@@ -358,8 +419,10 @@ _TheGameOfLife-github-version/
                     .then(() => {
                         if (this.currentView === 'overview') {
                             this.fetchAllActivities();
-                        } else {
+                        } else if (this.currentView === 'sections') {
                             this.fetchActivities(section);
+                        } else if (this.currentView === 'feedback') {
+                            this.fetchFeedbackActivities();
                         }
                     })
                     .catch(error => console.error(error));
@@ -391,7 +454,7 @@ _TheGameOfLife-github-version/
 </html>
 ```
 
-### `game-of-life-backend.py` file (5289 bytes):
+### `game-of-life-backend.py` file (5918 bytes):
 
 ```
 import pandas as pd
@@ -464,7 +527,10 @@ def process_activities(df, section):
             'color': color,
             'text': f"{current_minutes}/{total_minutes}",
             'is_zero': progress <= 0,
-            'section': section
+            'section': section,
+            'frequency': frequency,
+            'extra_interval': extra_interval,
+            'last_datetime': last_datetime.strftime(DATETIME_FORMAT)
         })
     return result
 
@@ -488,6 +554,18 @@ def get_all_activities():
     app.logger.debug(f"Returning {len(result)} activities for all sections")
     return jsonify(result)
 
+@app.route('/activities/feedback', methods=['GET'])
+def get_feedback_activities():
+    app.logger.debug("Fetching feedback activities")
+    result = []
+    for section in SECTIONS:
+        file_name = f"{section}.csv"
+        df = load_data(file_name)
+        result.extend(process_activities(df, section))
+    result.sort(key=lambda x: x['progress'])  # Sort by progress in ascending order
+    app.logger.debug(f"Returning {len(result)} sorted feedback activities")
+    return jsonify(result)
+
 @app.route('/complete/<section>/<path:activity>', methods=['POST'])
 def complete_activity(section, activity):
     app.logger.debug(f"Completing activity: {activity} in section: {section}")
@@ -495,7 +573,6 @@ def complete_activity(section, activity):
     df = load_data(file_name)
     data = request.json
     app.logger.debug(f"Received data: {data}")
-    
     if data and 'datetime' in data:
         app.logger.debug(f"Received datetime string: {data['datetime']}")
         try:
@@ -508,10 +585,9 @@ def complete_activity(section, activity):
     else:
         now = datetime.now()
         app.logger.warning(f"No datetime provided, using current datetime: {now}")
-    
+
     activity = urllib.parse.unquote(activity)
     app.logger.debug(f"Decoded activity: {activity}")
-    
     if activity in df['activity'].values:
         df.loc[df['activity'] == activity, 'last_datetime'] = now
         app.logger.debug(f"Updated existing activity: {activity} with datetime: {now}")
@@ -521,7 +597,7 @@ def complete_activity(section, activity):
         new_row = pd.DataFrame({'activity': [activity], 'frequency': [frequency], 'extra_interval': [extra_interval], 'last_datetime': [now]})
         df = pd.concat([df, new_row], ignore_index=True)
         app.logger.debug(f"Added new activity: {activity} with datetime: {now}")
-    
+
     save_data(df, file_name)
     return jsonify({'status': 'success', 'datetime': now.strftime('%Y-%m-%d %H:%M:%S')})
 
@@ -529,7 +605,7 @@ if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-### `README.md` file (757 bytes):
+### `README.md` file (754 bytes):
 
 ```
 # TheGameOfLife
@@ -549,11 +625,11 @@ TheGameOfLife/
 │   ├── social.csv (147 bytes)
 │   ├── bills_subscriptions.csv (141 bytes)
 │   └── home.csv (124 bytes)
-├── the-game-of-life-concept-art.png (41172 bytes)
-├── game-of-life-frontend.html (12689 bytes)
-├── game-of-life-backend.py (4712 bytes)
-├── README.md (567 bytes)
-└── start-game-of-life.bat (278 bytes)
+├── TheGameOfLife-concept-art.png (76036 bytes)
+├── game-of-life-frontend.html (19589 bytes)
+├── game-of-life-backend.py (5918 bytes)
+├── README.md (757 bytes)
+└── start-game-of-life.bat (286 bytes)
 ```
 
 ### Dependencies:

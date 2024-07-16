@@ -126,12 +126,23 @@
             font-size: 14px;
             margin-bottom: 10px;
         }
+        .feedback-activity {
+            background-color: #ffe6e6;
+            padding: 5px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+        .feedback-activity p {
+            margin: 2px 0;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <div id="app">
         <h1>The Game of Life</h1>
         <div class="navigation">
+            <button @click="showFeedback">Feedback</button>
             <button @click="showOverview">Overview</button>
             <button @click="showSections">Sections</button>
         </div>
@@ -154,7 +165,7 @@
                 </div>
             </div>
         </div>
-        <div v-else>
+        <div v-else-if="currentView === 'sections'">
             <div class="navigation">
                 <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
                 <button @click="nextPage" :disabled="currentPage === 2">Next</button>
@@ -172,10 +183,33 @@
                             <div class="progress-text">{{ formatTime(activity.text) }}</div>
                         </div>
                         <div class="button-container">
-                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+							<button @click="completeActivity(section, activity.activity)">Complete</button>
                             <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
                         </div>
                         <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-else-if="currentView === 'feedback'">
+            <div class="container">
+                <div v-for="section in sections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in getFeedbackActivitiesForSection(section)" :key="activity.activity" class="activity-container feedback-activity">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <p><strong>Progress:</strong> {{ (activity.progress * 100).toFixed(2) }}%</p>
+                        <p><strong>Frequency:</strong> {{ activity.frequency }} days</p>
+                        <p><strong>Extra Interval:</strong> {{ activity.extra_interval }} hours</p>
+                        <p><strong>Last Completed:</strong> {{ formatDateTime(activity.last_datetime) }}</p>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(activity.section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(activity.section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + activity.section + '-' + activity.activity" type="text" class="datetime-input">
                     </div>
                 </div>
             </div>
@@ -201,6 +235,7 @@
                     bills_subscriptions: []
                 },
                 activitiesBySection: {},
+                feedbackActivities: [],
                 flatpickrInstances: {}
             },
             computed: {
@@ -216,6 +251,10 @@
                 showSections() {
                     this.currentView = 'sections';
                     this.refreshData();
+                },
+                showFeedback() {
+                    this.currentView = 'feedback';
+                    this.fetchFeedbackActivities();
                 },
                 fetchActivities(section) {
                     console.log(`Fetching activities for section: ${section}`);
@@ -242,6 +281,20 @@
                             console.error('Error fetching all activities:', error);
                         });
                 },
+                fetchFeedbackActivities() {
+                    console.log('Fetching feedback activities');
+                    axios.get('http://localhost:5000/activities/feedback')
+                        .then(response => {
+                            console.log('Received feedback activities:', response.data);
+                            this.feedbackActivities = response.data;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching feedback activities:', error);
+                        });
+                },
+                getFeedbackActivitiesForSection(section) {
+                    return this.feedbackActivities.filter(activity => activity.section === section);
+                },
                 completeActivity(section, activity) {
                     axios.post(`http://localhost:5000/complete/${section}/${encodeURIComponent(activity)}`, {}, {
                         headers: {
@@ -251,8 +304,10 @@
                     .then(() => {
                         if (this.currentView === 'overview') {
                             this.fetchAllActivities();
-                        } else {
+                        } else if (this.currentView === 'sections') {
                             this.fetchActivities(section);
+                        } else if (this.currentView === 'feedback') {
+                            this.fetchFeedbackActivities();
                         }
                     })
                     .catch(error => console.error(error));
@@ -261,8 +316,10 @@
                     console.log('Refreshing data for current page');
                     if (this.currentView === 'overview') {
                         this.fetchAllActivities();
-                    } else {
+                    } else if (this.currentView === 'sections') {
                         this.currentSections.forEach(section => this.fetchActivities(section));
+                    } else if (this.currentView === 'feedback') {
+                        this.fetchFeedbackActivities();
                     }
                 },
                 formatTime(timeString) {
@@ -281,6 +338,10 @@
                 },
                 formatSectionTitle(section) {
                     return section.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                },
+                formatDateTime(dateTimeString) {
+                    const date = new Date(dateTimeString.replace(/_/g, ' '));
+                    return date.toLocaleString();
                 },
                 openDateTimePicker(section, activity) {
                     const key = `${section}-${activity}`;
@@ -340,8 +401,10 @@
                     .then(() => {
                         if (this.currentView === 'overview') {
                             this.fetchAllActivities();
-                        } else {
+                        } else if (this.currentView === 'sections') {
                             this.fetchActivities(section);
+                        } else if (this.currentView === 'feedback') {
+                            this.fetchFeedbackActivities();
                         }
                     })
                     .catch(error => console.error(error));
