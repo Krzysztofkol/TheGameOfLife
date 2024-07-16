@@ -18,7 +18,7 @@ TheGameOfLife/
 └── start-game-of-life.bat (278 bytes)
 ```
 
-![Screenshot of example dashboard](the-game-of-life-concept-art.png "Screenshot of example dashboard")
+![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
 ### Dependencies
 
