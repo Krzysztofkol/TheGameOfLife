@@ -103,7 +103,7 @@ def get_feedback_activities():
         file_name = f"{section}.csv"
         df = load_data(file_name)
         result.extend(process_activities(df, section))
-    result.sort(key=lambda x: x['progress'])  # Sort by progress in ascending order
+    result.sort(key=lambda x: (x['progress'], x['last_datetime']))  # Sort by progress and then by last_datetime
     app.logger.debug(f"Returning {len(result)} sorted feedback activities")
     return jsonify(result)
 
@@ -126,7 +126,6 @@ def complete_activity(section, activity):
     else:
         now = datetime.now()
         app.logger.warning(f"No datetime provided, using current datetime: {now}")
-
     activity = urllib.parse.unquote(activity)
     app.logger.debug(f"Decoded activity: {activity}")
     if activity in df['activity'].values:
@@ -138,7 +137,6 @@ def complete_activity(section, activity):
         new_row = pd.DataFrame({'activity': [activity], 'frequency': [frequency], 'extra_interval': [extra_interval], 'last_datetime': [now]})
         df = pd.concat([df, new_row], ignore_index=True)
         app.logger.debug(f"Added new activity: {activity} with datetime: {now}")
-
     save_data(df, file_name)
     return jsonify({'status': 'success', 'datetime': now.strftime('%Y-%m-%d %H:%M:%S')})
 
