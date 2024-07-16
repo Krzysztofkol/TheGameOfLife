@@ -1,3 +1,4 @@
+### Folder structure:
 _TheGameOfLife-github-version/
 ├── csv_files/ (6 items)
 │   ├── nutrition_hydration.csv (176 bytes)
@@ -7,12 +8,12 @@ _TheGameOfLife-github-version/
 │   ├── bills_subscriptions.csv (141 bytes)
 │   └── home.csv (124 bytes)
 ├── TheGameOfLife-concept-art.png (76036 bytes)
-├── game-of-life-frontend.html (12689 bytes)
-├── game-of-life-backend.py (4712 bytes)
-├── README.md (785 bytes)
+├── game-of-life-frontend.html (15889 bytes)
+├── game-of-life-backend.py (5289 bytes)
+├── README.md (757 bytes)
 └── start-game-of-life.bat (286 bytes)
 
-### `game-of-life-frontend.html` file (12689 bytes):
+### `game-of-life-frontend.html` file (15889 bytes):
 
 ```
 <!DOCTYPE html>
@@ -148,30 +149,52 @@ _TheGameOfLife-github-version/
 <body>
     <div id="app">
         <h1>The Game of Life</h1>
-        
         <div class="navigation">
-            <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
-            <button @click="nextPage" :disabled="currentPage === 2">Next</button>
+            <button @click="showOverview">Overview</button>
+            <button @click="showSections">Sections</button>
         </div>
-        
-        <div class="page-number">
-            Page {{ currentPage }} of 2
+        <div v-if="currentView === 'overview'">
+            <div class="container">
+                <div v-for="section in sections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in activitiesBySection[section]" :key="activity.activity" class="activity-container">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="container">
-            <div v-for="section in currentSections" :key="section" class="column">
-                <h2>{{ formatSectionTitle(section) }}</h2>
-                <div v-for="activity in activities[section]" :key="activity.activity" class="activity-container">
-                    <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
-                    <div class="progress-bar">
-                        <div class="progress" :style="getProgressStyle(activity)"></div>
-                        <div class="progress-text">{{ formatTime(activity.text) }}</div>
+        <div v-else>
+            <div class="navigation">
+                <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
+                <button @click="nextPage" :disabled="currentPage === 2">Next</button>
+            </div>
+            <div class="page-number">
+                Page {{ currentPage }} of 2
+            </div>
+            <div class="container">
+                <div v-for="section in currentSections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in activities[section]" :key="activity.activity" class="activity-container">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
                     </div>
-                    <div class="button-container">
-                        <button @click="completeActivity(section, activity.activity)">Complete</button>
-                        <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
-                    </div>
-                    <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
                 </div>
             </div>
         </div>
@@ -180,7 +203,9 @@ _TheGameOfLife-github-version/
         new Vue({
             el: '#app',
             data: {
+                currentView: 'sections',
                 currentPage: 1,
+                sections: ['health_hygiene', 'personal', 'nutrition_hydration', 'home', 'social', 'bills_subscriptions'],
                 pages: [
                     ['health_hygiene', 'personal', 'nutrition_hydration'],
                     ['home', 'social', 'bills_subscriptions']
@@ -193,6 +218,7 @@ _TheGameOfLife-github-version/
                     social: [],
                     bills_subscriptions: []
                 },
+                activitiesBySection: {},
                 flatpickrInstances: {}
             },
             computed: {
@@ -201,6 +227,14 @@ _TheGameOfLife-github-version/
                 }
             },
             methods: {
+                showOverview() {
+                    this.currentView = 'overview';
+                    this.fetchAllActivities();
+                },
+                showSections() {
+                    this.currentView = 'sections';
+                    this.refreshData();
+                },
                 fetchActivities(section) {
                     console.log(`Fetching activities for section: ${section}`);
                     axios.get(`http://localhost:5000/activities/${section}`)
@@ -212,20 +246,42 @@ _TheGameOfLife-github-version/
                             console.error(`Error fetching activities for ${section}:`, error);
                         });
                 },
+                fetchAllActivities() {
+                    console.log('Fetching all activities');
+                    axios.get('http://localhost:5000/activities/all')
+                        .then(response => {
+                            console.log('Received data for all sections:', response.data);
+                            this.activitiesBySection = this.sections.reduce((acc, section) => {
+                                acc[section] = response.data.filter(activity => activity.section === section);
+                                return acc;
+                            }, {});
+                        })
+                        .catch(error => {
+                            console.error('Error fetching all activities:', error);
+                        });
+                },
                 completeActivity(section, activity) {
                     axios.post(`http://localhost:5000/complete/${section}/${encodeURIComponent(activity)}`, {}, {
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     })
-                        .then(() => {
+                    .then(() => {
+                        if (this.currentView === 'overview') {
+                            this.fetchAllActivities();
+                        } else {
                             this.fetchActivities(section);
-                        })
-                        .catch(error => console.error(error));
+                        }
+                    })
+                    .catch(error => console.error(error));
                 },
                 refreshData() {
                     console.log('Refreshing data for current page');
-                    this.currentSections.forEach(section => this.fetchActivities(section));
+                    if (this.currentView === 'overview') {
+                        this.fetchAllActivities();
+                    } else {
+                        this.currentSections.forEach(section => this.fetchActivities(section));
+                    }
                 },
                 formatTime(timeString) {
                     const [current, total] = timeString.split('/').map(Number);
@@ -247,7 +303,6 @@ _TheGameOfLife-github-version/
                 openDateTimePicker(section, activity) {
                     const key = `${section}-${activity}`;
                     const inputRef = this.$refs[`datetime-${section}-${activity}`][0];
-                    
                     if (!this.flatpickrInstances[key]) {
                         this.flatpickrInstances[key] = flatpickr(inputRef, {
                             enableTime: true,
@@ -267,7 +322,6 @@ _TheGameOfLife-github-version/
                             onReady: (selectedDates, dateStr, instance) => {
                                 const customButtons = document.createElement('div');
                                 customButtons.className = 'flatpickr-confirm';
-                                
                                 const enterButton = document.createElement('button');
                                 enterButton.textContent = `Enter: ${activity}`;
                                 enterButton.className = 'enter-button';
@@ -277,14 +331,12 @@ _TheGameOfLife-github-version/
                                     }
                                     instance.close();
                                 });
-                                
                                 const exitButton = document.createElement('button');
                                 exitButton.textContent = 'Exit';
                                 exitButton.className = 'exit';
                                 exitButton.addEventListener('click', () => {
                                     instance.close();
                                 });
-                                
                                 customButtons.appendChild(enterButton);
                                 customButtons.appendChild(exitButton);
                                 instance.calendarContainer.appendChild(customButtons);
@@ -304,7 +356,11 @@ _TheGameOfLife-github-version/
                         }
                     })
                     .then(() => {
-                        this.fetchActivities(section);
+                        if (this.currentView === 'overview') {
+                            this.fetchAllActivities();
+                        } else {
+                            this.fetchActivities(section);
+                        }
                     })
                     .catch(error => console.error(error));
                 },
@@ -335,10 +391,9 @@ _TheGameOfLife-github-version/
 </html>
 ```
 
-### `game-of-life-backend.py` file (4712 bytes):
+### `game-of-life-backend.py` file (5289 bytes):
 
 ```
-# game-of-life-backend.py
 import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -353,6 +408,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 CSV_FOLDER = 'csv_files'
 DATETIME_FORMAT = '%Y-%m-%d_%H:%M:%S'
+SECTIONS = ['health_hygiene', 'personal', 'nutrition_hydration', 'home', 'social', 'bills_subscriptions']
 
 def load_data(file_name):
     try:
@@ -393,31 +449,43 @@ def generate_color(progress):
         green = min(255, max(0, int(255 * progress * 2)))
         return f"rgb({red},{green},0)"
 
-@app.route('/activities/<section>', methods=['GET'])
-def get_activities(section):
-    app.logger.debug(f"Fetching activities for section: {section}")
-    file_name = f"{section}.csv"
-    df = load_data(file_name)
-    
+def process_activities(df, section):
     result = []
     for _, row in df.iterrows():
         activity = row['activity']
         frequency = row['frequency']
         extra_interval = row['extra_interval']
         last_datetime = row['last_datetime']
-        
         progress, current_minutes, total_minutes = calculate_progress(last_datetime, frequency, extra_interval)
         color = generate_color(progress)
-        
         result.append({
             'activity': activity,
             'progress': progress,
             'color': color,
             'text': f"{current_minutes}/{total_minutes}",
-            'is_zero': progress <= 0
+            'is_zero': progress <= 0,
+            'section': section
         })
-    
+    return result
+
+@app.route('/activities/<section>', methods=['GET'])
+def get_activities(section):
+    app.logger.debug(f"Fetching activities for section: {section}")
+    file_name = f"{section}.csv"
+    df = load_data(file_name)
+    result = process_activities(df, section)
     app.logger.debug(f"Returning {len(result)} activities for section: {section}")
+    return jsonify(result)
+
+@app.route('/activities/all', methods=['GET'])
+def get_all_activities():
+    app.logger.debug("Fetching all activities")
+    result = []
+    for section in SECTIONS:
+        file_name = f"{section}.csv"
+        df = load_data(file_name)
+        result.extend(process_activities(df, section))
+    app.logger.debug(f"Returning {len(result)} activities for all sections")
     return jsonify(result)
 
 @app.route('/complete/<section>/<path:activity>', methods=['POST'])
@@ -425,9 +493,9 @@ def complete_activity(section, activity):
     app.logger.debug(f"Completing activity: {activity} in section: {section}")
     file_name = f"{section}.csv"
     df = load_data(file_name)
-    
     data = request.json
     app.logger.debug(f"Received data: {data}")
+    
     if data and 'datetime' in data:
         app.logger.debug(f"Received datetime string: {data['datetime']}")
         try:
@@ -455,17 +523,20 @@ def complete_activity(section, activity):
         app.logger.debug(f"Added new activity: {activity} with datetime: {now}")
     
     save_data(df, file_name)
-    
     return jsonify({'status': 'success', 'datetime': now.strftime('%Y-%m-%d %H:%M:%S')})
 
 if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-### `README.md` file (785 bytes):
+### `README.md` file (757 bytes):
 
 ```
 # TheGameOfLife
+
+### The UI:
+
+![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
 ### Folder structure:
 
@@ -484,16 +555,12 @@ TheGameOfLife/
 ├── README.md (567 bytes)
 └── start-game-of-life.bat (278 bytes)
 ```
-### The UI:
-
-![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
 ### Dependencies:
 
 - flask
 - flask_cors
 - pandas
-
 ```
 
 ### `start-game-of-life.bat` file (286 bytes):
