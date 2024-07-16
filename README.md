@@ -21,7 +21,7 @@ TheGameOfLife/
 
 ![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
-### Dependencies
+### Dependencies:
 
 - flask
 - flask_cors
