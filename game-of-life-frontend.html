@@ -131,30 +131,52 @@
 <body>
     <div id="app">
         <h1>The Game of Life</h1>
-        
         <div class="navigation">
-            <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
-            <button @click="nextPage" :disabled="currentPage === 2">Next</button>
+            <button @click="showOverview">Overview</button>
+            <button @click="showSections">Sections</button>
         </div>
-        
-        <div class="page-number">
-            Page {{ currentPage }} of 2
+        <div v-if="currentView === 'overview'">
+            <div class="container">
+                <div v-for="section in sections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in activitiesBySection[section]" :key="activity.activity" class="activity-container">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="container">
-            <div v-for="section in currentSections" :key="section" class="column">
-                <h2>{{ formatSectionTitle(section) }}</h2>
-                <div v-for="activity in activities[section]" :key="activity.activity" class="activity-container">
-                    <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
-                    <div class="progress-bar">
-                        <div class="progress" :style="getProgressStyle(activity)"></div>
-                        <div class="progress-text">{{ formatTime(activity.text) }}</div>
+        <div v-else>
+            <div class="navigation">
+                <button @click="previousPage" :disabled="currentPage === 1">Previous</button>
+                <button @click="nextPage" :disabled="currentPage === 2">Next</button>
+            </div>
+            <div class="page-number">
+                Page {{ currentPage }} of 2
+            </div>
+            <div class="container">
+                <div v-for="section in currentSections" :key="section" class="column">
+                    <h2>{{ formatSectionTitle(section) }}</h2>
+                    <div v-for="activity in activities[section]" :key="activity.activity" class="activity-container">
+                        <div class="activity-label" :title="activity.activity">{{ activity.activity }}</div>
+                        <div class="progress-bar">
+                            <div class="progress" :style="getProgressStyle(activity)"></div>
+                            <div class="progress-text">{{ formatTime(activity.text) }}</div>
+                        </div>
+                        <div class="button-container">
+                            <button @click="completeActivity(section, activity.activity)">Complete</button>
+                            <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
+                        </div>
+                        <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
                     </div>
-                    <div class="button-container">
-                        <button @click="completeActivity(section, activity.activity)">Complete</button>
-                        <button @click="openDateTimePicker(section, activity.activity)">Select datetime</button>
-                    </div>
-                    <input :ref="'datetime-' + section + '-' + activity.activity" type="text" class="datetime-input">
                 </div>
             </div>
         </div>
@@ -163,7 +185,9 @@
         new Vue({
             el: '#app',
             data: {
+                currentView: 'sections',
                 currentPage: 1,
+                sections: ['health_hygiene', 'personal', 'nutrition_hydration', 'home', 'social', 'bills_subscriptions'],
                 pages: [
                     ['health_hygiene', 'personal', 'nutrition_hydration'],
                     ['home', 'social', 'bills_subscriptions']
@@ -176,6 +200,7 @@
                     social: [],
                     bills_subscriptions: []
                 },
+                activitiesBySection: {},
                 flatpickrInstances: {}
             },
             computed: {
@@ -184,6 +209,14 @@
                 }
             },
             methods: {
+                showOverview() {
+                    this.currentView = 'overview';
+                    this.fetchAllActivities();
+                },
+                showSections() {
+                    this.currentView = 'sections';
+                    this.refreshData();
+                },
                 fetchActivities(section) {
                     console.log(`Fetching activities for section: ${section}`);
                     axios.get(`http://localhost:5000/activities/${section}`)
@@ -195,20 +228,42 @@
                             console.error(`Error fetching activities for ${section}:`, error);
                         });
                 },
+                fetchAllActivities() {
+                    console.log('Fetching all activities');
+                    axios.get('http://localhost:5000/activities/all')
+                        .then(response => {
+                            console.log('Received data for all sections:', response.data);
+                            this.activitiesBySection = this.sections.reduce((acc, section) => {
+                                acc[section] = response.data.filter(activity => activity.section === section);
+                                return acc;
+                            }, {});
+                        })
+                        .catch(error => {
+                            console.error('Error fetching all activities:', error);
+                        });
+                },
                 completeActivity(section, activity) {
                     axios.post(`http://localhost:5000/complete/${section}/${encodeURIComponent(activity)}`, {}, {
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     })
-                        .then(() => {
+                    .then(() => {
+                        if (this.currentView === 'overview') {
+                            this.fetchAllActivities();
+                        } else {
                             this.fetchActivities(section);
-                        })
-                        .catch(error => console.error(error));
+                        }
+                    })
+                    .catch(error => console.error(error));
                 },
                 refreshData() {
                     console.log('Refreshing data for current page');
-                    this.currentSections.forEach(section => this.fetchActivities(section));
+                    if (this.currentView === 'overview') {
+                        this.fetchAllActivities();
+                    } else {
+                        this.currentSections.forEach(section => this.fetchActivities(section));
+                    }
                 },
                 formatTime(timeString) {
                     const [current, total] = timeString.split('/').map(Number);
@@ -230,7 +285,6 @@
                 openDateTimePicker(section, activity) {
                     const key = `${section}-${activity}`;
                     const inputRef = this.$refs[`datetime-${section}-${activity}`][0];
-                    
                     if (!this.flatpickrInstances[key]) {
                         this.flatpickrInstances[key] = flatpickr(inputRef, {
                             enableTime: true,
@@ -250,7 +304,6 @@
                             onReady: (selectedDates, dateStr, instance) => {
                                 const customButtons = document.createElement('div');
                                 customButtons.className = 'flatpickr-confirm';
-                                
                                 const enterButton = document.createElement('button');
                                 enterButton.textContent = `Enter: ${activity}`;
                                 enterButton.className = 'enter-button';
@@ -260,14 +313,12 @@
                                     }
                                     instance.close();
                                 });
-                                
                                 const exitButton = document.createElement('button');
                                 exitButton.textContent = 'Exit';
                                 exitButton.className = 'exit';
                                 exitButton.addEventListener('click', () => {
                                     instance.close();
                                 });
-                                
                                 customButtons.appendChild(enterButton);
                                 customButtons.appendChild(exitButton);
                                 instance.calendarContainer.appendChild(customButtons);
@@ -287,7 +338,11 @@
                         }
                     })
                     .then(() => {
-                        this.fetchActivities(section);
+                        if (this.currentView === 'overview') {
+                            this.fetchAllActivities();
+                        } else {
+                            this.fetchActivities(section);
+                        }
                     })
                     .catch(error => console.error(error));
                 },

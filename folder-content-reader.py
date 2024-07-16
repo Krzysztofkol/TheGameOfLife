@@ -118,6 +118,7 @@ def main() -> None:
     file_info: List[Tuple[str, int, Optional[str]]] = []
 
     with open(output_file, 'w', encoding='utf-8') as out_file:
+        out_file.write(f"### Folder structure:\n")
         out_file.write(f"{folder_name}/\n")
         tree_structure = get_tree_structure(current_dir, script_name, output_file)
         out_file.write(tree_structure)
