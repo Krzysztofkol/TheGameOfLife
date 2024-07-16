@@ -1,3 +1,4 @@
+# game-of-life-backend.py
 import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -8,7 +9,6 @@ import logging
 
 app = Flask(__name__)
 CORS(app)
-
 logging.basicConfig(level=logging.DEBUG)
 
 CSV_FOLDER = 'csv_files'
@@ -17,11 +17,16 @@ DATETIME_FORMAT = '%Y-%m-%d_%H:%M:%S'
 def load_data(file_name):
     try:
         file_path = os.path.join(CSV_FOLDER, file_name)
+        app.logger.debug(f"Attempting to load file: {file_path}")
         df = pd.read_csv(file_path)
         df['last_datetime'] = pd.to_datetime(df['last_datetime'], format=DATETIME_FORMAT)
+        app.logger.debug(f"Successfully loaded file: {file_path}")
         return df
     except FileNotFoundError:
         app.logger.warning(f"File not found: {file_name}")
+        return pd.DataFrame(columns=['activity', 'frequency', 'extra_interval', 'last_datetime'])
+    except Exception as e:
+        app.logger.error(f"Error loading file {file_name}: {str(e)}")
         return pd.DataFrame(columns=['activity', 'frequency', 'extra_interval', 'last_datetime'])
 
 def save_data(df, file_name):
@@ -39,9 +44,9 @@ def calculate_progress(last_datetime, frequency, extra_interval):
     return progress, current_minutes, total_minutes
 
 def generate_color(progress):
-    if progress <= 0:
+    if (progress <= 0):
         return "rgb(255,0,0)"
-    elif progress >= 0.9:
+    elif (progress >= 0.9):
         return "rgb(0,255,0)"
     else:
         red = min(255, max(0, int(255 * (1 - progress) * 2)))
