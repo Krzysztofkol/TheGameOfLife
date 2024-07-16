@@ -6,11 +6,11 @@ _TheGameOfLife-github-version/
 │   ├── social.csv (147 bytes)
 │   ├── bills_subscriptions.csv (141 bytes)
 │   └── home.csv (124 bytes)
-├── the-game-of-life-concept-art.png (41172 bytes)
+├── TheGameOfLife-concept-art.png (76036 bytes)
 ├── game-of-life-frontend.html (12689 bytes)
 ├── game-of-life-backend.py (4712 bytes)
-├── README.md (567 bytes)
-└── start-game-of-life.bat (278 bytes)
+├── README.md (785 bytes)
+└── start-game-of-life.bat (286 bytes)
 
 ### `game-of-life-frontend.html` file (12689 bytes):
 
@@ -462,7 +462,7 @@ if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-### `README.md` file (567 bytes):
+### `README.md` file (785 bytes):
 
 ```
 # TheGameOfLife
@@ -471,22 +471,24 @@ if __name__ == '__main__':
 
 ```
 TheGameOfLife/
-├── the-game-of-life-concept-art.png
-├── csv_files/
-│   ├── health_hygiene.csv
-│   ├── home.csv
-│   ├── nutrition_hydration.csv
-│   ├── personal.csv
-│   └── social.csv
-├── game-of-life-backend.py
-├── game-of-life-frontend.html
-└── start-game-of-life.bat
+├── csv_files/ (6 items)
+│   ├── nutrition_hydration.csv (176 bytes)
+│   ├── personal.csv (153 bytes)
+│   ├── health_hygiene.csv (148 bytes)
+│   ├── social.csv (147 bytes)
+│   ├── bills_subscriptions.csv (141 bytes)
+│   └── home.csv (124 bytes)
+├── the-game-of-life-concept-art.png (41172 bytes)
+├── game-of-life-frontend.html (12689 bytes)
+├── game-of-life-backend.py (4712 bytes)
+├── README.md (567 bytes)
+└── start-game-of-life.bat (278 bytes)
 ```
+### The UI:
 
-![Screenshot of example dashboard](the-game-of-life-concept-art.png "Screenshot of example dashboard")
+![Screenshot of example dashboard](TheGameOfLife-concept-art.png "Screenshot of example dashboard")
 
-
-### Dependencies
+### Dependencies:
 
 - flask
 - flask_cors
@@ -494,17 +496,17 @@ TheGameOfLife/
 
 ```
 
-### `start-game-of-life.bat` file (278 bytes):
+### `start-game-of-life.bat` file (286 bytes):
 
 ```
 @echo off
 ::move to the current folder
 cd /d "%~dp0"
 ::install or update dependencies
-python -m pip install -U pip
-pip install flask
-pip install flask_cors
-pip install pandas
+::python -m pip install -U pip
+::pip install flask
+::pip install flask_cors
+::pip install pandas
 ::run frontend first
 start "" "game-of-life-frontend.html"
 ::run backend
@@ -515,8 +517,8 @@ python game-of-life-backend.py
 
 ```
 activity,frequency,extra_interval,last_datetime
-Morning drinking salty lemon water,1,4,2024-07-15_05:03:05
-Morning eating a square of dark chocolate,1,4,2024-07-13_08:58:12
+Morning drinking salty lemon water,0,1,2024-07-16_10:10:00
+Morning eating a square of dark chocolate,1,4,2024-07-16_07:40:00
 
 ```
 
@@ -524,7 +526,7 @@ Morning eating a square of dark chocolate,1,4,2024-07-13_08:58:12
 
 ```
 activity,frequency,extra_interval,last_datetime
-Making a GitHub commit,1,10,2024-07-15_05:03:04
+Making a GitHub commit,1,10,2024-07-16_10:39:56
 Completing a DataCamp lesson,1,12,2024-07-01_14:49:14
 
 ```
@@ -533,8 +535,8 @@ Completing a DataCamp lesson,1,12,2024-07-01_14:49:14
 
 ```
 activity,frequency,extra_interval,last_datetime
-Going on a morning walk/jog,1.0,12,2024-07-15_05:03:03
-Brushing teeth,0.25,0,2024-07-15_05:03:06
+Going on a morning walk/jog,1.0,12,2024-07-16_07:40:00
+Brushing teeth,0.25,0,2024-07-16_10:39:52
 
 ```
 
